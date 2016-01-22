@@ -52,3 +52,23 @@ class GitDiffTool(object):
         to stderr.
         """
         return execute(['git', 'diff', '--cached', '--no-color', '--no-ext-diff'])[0]
+
+
+class ProvidedDiffTool(object):
+    """
+    Like GitDiffTool, but returns results from caller-provided diff instead.
+    """
+
+    def __init__(self, diff):
+        self._diff_committed = diff
+
+    def diff_committed(self, compare_branch='origin/master'):
+        return self._diff_committed
+
+    @staticmethod
+    def diff_unstaged():
+        return ''
+
+    @staticmethod
+    def diff_staged():
+        return ''

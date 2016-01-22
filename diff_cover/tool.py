@@ -12,7 +12,7 @@ import six
 
 import diff_cover
 from diff_cover.diff_reporter import GitDiffReporter
-from diff_cover.git_diff import GitDiffTool
+from diff_cover.git_diff import GitDiffTool, ProvidedDiffTool
 from diff_cover.git_path import GitPathTool
 from diff_cover.report_generator import (
     HtmlReportGenerator, StringReportGenerator,
@@ -32,6 +32,7 @@ INPUT_REPORTS_HELP = "Which reports reports to use"
 OPTIONS_HELP = "Options to be passed to the violations tool"
 FAIL_UNDER_HELP = "Returns an error code if coverage or quality score is below this value"
 IGNORE_UNSTAGED_HELP = "Ignores unstaged changes"
+DIFF_COMMITTED_HELP = "Provided output from `git diff`. If provided, prevents shelling to git."
 
 QUALITY_DRIVERS = {
     'pep8': pep8_driver,
@@ -97,6 +98,13 @@ def parse_coverage_args(argv):
         action='store_true',
         default=False,
         help=IGNORE_UNSTAGED_HELP
+    )
+
+    parser.add_argument(
+        '--diff-committed',
+        action='store',
+        dest='diff_committed',
+        help=DIFF_COMMITTED_HELP
     )
 
     return vars(parser.parse_args(argv))
@@ -172,11 +180,11 @@ def parse_quality_args(argv):
     return vars(parser.parse_args(argv))
 
 
-def generate_coverage_report(coverage_xml, compare_branch, html_report=None, ignore_unstaged=False):
+def generate_coverage_report(coverage_xml, diff_tool, compare_branch, html_report=None, ignore_unstaged=False):
     """
     Generate the diff coverage report, using kwargs from `parse_args()`.
     """
-    diff = GitDiffReporter(compare_branch, git_diff=GitDiffTool(), ignore_unstaged=ignore_unstaged)
+    diff = GitDiffReporter(compare_branch, git_diff=diff_tool, ignore_unstaged=ignore_unstaged)
 
     xml_roots = [cElementTree.parse(xml_root) for xml_root in coverage_xml]
     coverage = XmlCoverageReporter(xml_roots)
@@ -195,11 +203,11 @@ def generate_coverage_report(coverage_xml, compare_branch, html_report=None, ign
     return reporter.total_percent_covered()
 
 
-def generate_quality_report(tool, compare_branch, html_report=None, ignore_unstaged=False):
+def generate_quality_report(tool, diff_tool, compare_branch, html_report=None, ignore_unstaged=False):
     """
     Generate the quality report, using kwargs from `parse_args()`.
     """
-    diff = GitDiffReporter(compare_branch, git_diff=GitDiffTool(), ignore_unstaged=ignore_unstaged)
+    diff = GitDiffReporter(compare_branch, git_diff=diff_tool, ignore_unstaged=ignore_unstaged)
 
     if html_report is not None:
         reporter = HtmlQualityReportGenerator(tool, diff)
@@ -240,8 +248,15 @@ def main(argv=None, directory=None):
     if 'diff-cover' in name:
         arg_dict = parse_coverage_args(argv[1:])
         fail_under = arg_dict.get('fail_under')
+
+        diff_tool = GitDiffTool()
+        diff_committed = arg_dict['diff_committed']
+        if diff_committed is not None:
+            diff_tool = ProvidedDiffTool(diff_committed)
+
         percent_covered = generate_coverage_report(
             arg_dict['coverage_xml'],
+            diff_tool,
             arg_dict['compare_branch'],
             html_report=arg_dict['html_report'],
             ignore_unstaged=arg_dict['ignore_unstaged'],
@@ -258,6 +273,12 @@ def main(argv=None, directory=None):
         fail_under = arg_dict.get('fail_under')
         tool = arg_dict['violations']
         user_options = arg_dict.get('options')
+
+        diff_tool = GitDiffTool()
+        diff_committed = arg_dict['diff_committed']
+        if diff_committed is not None:
+            diff_tool = ProvidedDiffTool(diff_committed)
+
         if user_options:
             # strip quotes if present
             first_char = user_options[0]
@@ -280,6 +301,7 @@ def main(argv=None, directory=None):
                 reporter = QualityReporter(driver, input_reports, user_options)
                 percent_passing = generate_quality_report(
                     reporter,
+                    diff_tool,
                     arg_dict['compare_branch'],
                     arg_dict['html_report'],
                     arg_dict['ignore_unstaged'],
