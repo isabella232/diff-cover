@@ -32,7 +32,7 @@ INPUT_REPORTS_HELP = "Which reports reports to use"
 OPTIONS_HELP = "Options to be passed to the violations tool"
 FAIL_UNDER_HELP = "Returns an error code if coverage or quality score is below this value"
 IGNORE_UNSTAGED_HELP = "Ignores unstaged changes"
-DIFF_COMMITTED_HELP = "Provided output from `git diff`. If provided, prevents shelling to git."
+DIFF_COMMITTED_HELP = "A file containing output from `git diff`. If provided, prevents shelling to git."
 
 QUALITY_DRIVERS = {
     'pep8': pep8_driver,
@@ -101,9 +101,9 @@ def parse_coverage_args(argv):
     )
 
     parser.add_argument(
-        '--diff-committed',
-        action='store',
-        dest='diff_committed',
+        '--diff-committed-file',
+        type=argparse.FileType('r'),
+        dest='diff_committed_file',
         help=DIFF_COMMITTED_HELP
     )
 
@@ -250,9 +250,10 @@ def main(argv=None, directory=None):
         fail_under = arg_dict.get('fail_under')
 
         diff_tool = GitDiffTool()
-        diff_committed = arg_dict['diff_committed']
-        if diff_committed is not None:
-            diff_tool = ProvidedDiffTool(diff_committed)
+        diff_committed_file = arg_dict['diff_committed_file']
+        if diff_committed_file is not None:
+            with diff_committed_file as f:
+                diff_tool = ProvidedDiffTool(f.read())
 
         percent_covered = generate_coverage_report(
             arg_dict['coverage_xml'],
@@ -275,9 +276,10 @@ def main(argv=None, directory=None):
         user_options = arg_dict.get('options')
 
         diff_tool = GitDiffTool()
-        diff_committed = arg_dict['diff_committed']
-        if diff_committed is not None:
-            diff_tool = ProvidedDiffTool(diff_committed)
+        diff_committed_file = arg_dict['diff_committed_file']
+        if diff_committed_file is not None:
+            with diff_committed_file as f:
+                diff_tool = ProvidedDiffTool(f.read())
 
         if user_options:
             # strip quotes if present
