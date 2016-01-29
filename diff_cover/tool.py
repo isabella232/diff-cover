@@ -32,7 +32,7 @@ INPUT_REPORTS_HELP = "Which reports reports to use"
 OPTIONS_HELP = "Options to be passed to the violations tool"
 FAIL_UNDER_HELP = "Returns an error code if coverage or quality score is below this value"
 IGNORE_UNSTAGED_HELP = "Ignores unstaged changes"
-DIFF_COMMITTED_HELP = "A file containing output from `git diff`. If provided, prevents shelling to git."
+DIFF_COMMITTED_HELP = "A file containing utf-8-encoded output from `git diff`. If provided, prevents shelling to git."
 
 QUALITY_DRIVERS = {
     'pep8': pep8_driver,
@@ -253,7 +253,7 @@ def main(argv=None, directory=None):
         diff_committed_file = arg_dict['diff_committed_file']
         if diff_committed_file is not None:
             with diff_committed_file as f:
-                diff_tool = ProvidedDiffTool(f.read())
+                diff_tool = ProvidedDiffTool(f.read().decode('utf-8'))
 
         percent_covered = generate_coverage_report(
             arg_dict['coverage_xml'],
@@ -279,7 +279,7 @@ def main(argv=None, directory=None):
         diff_committed_file = arg_dict['diff_committed_file']
         if diff_committed_file is not None:
             with diff_committed_file as f:
-                diff_tool = ProvidedDiffTool(f.read())
+                diff_tool = ProvidedDiffTool(f.read().decode('utf-8'))
 
         if user_options:
             # strip quotes if present
